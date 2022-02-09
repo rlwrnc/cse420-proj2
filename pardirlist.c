@@ -1,3 +1,18 @@
+/*
+ * CSE 420 Project 2
+ * Author: Raymond Lawrence
+ *
+ * TODO:
+ * change input to require <keyword> and <ispar> params
+ *      require <keyword> to be a single word
+ *      require <ispar> to be 0 or 1
+ * add <keyword_frequency> to each node
+ *      searches for instances in FILES (folders have value of zero)
+ * Add multithreading functionality for ispar = 1
+ *
+ * /
+
+
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
