@@ -3,14 +3,13 @@
  * Author: Raymond Lawrence
  *
  * TODO:
- * change input to require <keyword> and <ispar> params
+ * -change input to require <keyword> and <ispar> params
  *      require <keyword> to be a single word
- *      require <ispar> to be 0 or 1
  * add <keyword_frequency> to each node
  *      searches for instances in FILES (folders have value of zero)
  * Add multithreading functionality for ispar = 1
  *
- * /
+ */
 
 
 #include <stdio.h>
@@ -62,6 +61,33 @@ struct list *create_list()
     list->head = NULL;
     list->tail = NULL;
     return list;
+}
+
+//frequency helper functions
+
+int seq_search_file(char *file_path)
+{
+    FILE *fs;
+    char buff[1024];
+    char *token;
+
+    fs = fopen(file_path, "r");
+
+    while (fs != NULL) {
+        fgets(buff, 1024, fs);
+        token = strtok(buff, " ");
+        while (token != NULL) {
+            //do shit
+            token = strtok(NULL, " ");
+        }
+    }
+
+    return 
+}
+
+int par_search_file()
+{
+    
 }
 
 //inserts
@@ -181,12 +207,19 @@ void insertion_sort_by_level_increasing(struct list *list)
 
 int main(int argc, char **argv)
 {
-    if (argc != 3) {
-        printf("usage: dirlist directory_path file_name\n");
-        return -1;
+    if (argc != 5) {
+        fprintf(stderr, "dirlist: usage: dirlist <directory_path> <keyword> <output_file> <ispar>\n");
+        return 1;
     }
 
-    char *dirpath = argv[1], *outfile = argv[2];
+    char *dirpath = argv[1], *keyword = argv[2], *outfile = argv[3];
+    int ispar = atoi(argv[4]);
+
+    if (ispar != 0 && ispar != 1) {
+        fprintf(stderr, "dirlist: <ispar> must be 0 or 1");
+        return 1;
+    }
+
     struct list *dirlist = create_list();
     populate_list(dirpath, dirlist);
     insertion_sort_by_level_increasing(dirlist);
