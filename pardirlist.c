@@ -26,6 +26,7 @@
 struct node {
     char *path;
     int level;
+    int keyword_frequency;
     struct node *next;
     struct node *prev;
 };
@@ -37,7 +38,7 @@ struct list {
 
 //creation subroutines
 
-struct node *create_node(char *path, int level)
+struct node *create_node(char *path, int level, int keyword_frequency)
 {
     struct node *node = malloc(sizeof(struct node));
     if (node == NULL) {
@@ -46,6 +47,7 @@ struct node *create_node(char *path, int level)
     }
     node->path = strdup(path);
     node->level = level;
+    node->keyword_frequency = keyword_frequency;
     node->next = NULL;
     node->prev = NULL;
     return node;
@@ -65,29 +67,33 @@ struct list *create_list()
 
 //frequency helper functions
 
-int seq_search_file(char *file_path)
+int seq_search_file(char *file_path, char *keyword)
 {
     FILE *fs;
     char buff[1024];
-    char *token;
+    char *token, *context;
+    int frequency;
 
     fs = fopen(file_path, "r");
-
-    while (fs != NULL) {
-        fgets(buff, 1024, fs);
-        token = strtok(buff, " ");
+    context = NULL;
+    frequency = 0;
+    
+    while (fgets(buff, 1024, fs) != NULL) {
+        token = strtok_r(buff, " \t", &context);
         while (token != NULL) {
-            //do shit
-            token = strtok(NULL, " ");
+            if (strcmp(token, keyword) == 0)
+                frequency++;
+            token = strtok_r(NULL, " ", &context);
         }
     }
 
-    return 
+    fclose(fs);
+    return frequency;
 }
 
 int par_search_file()
 {
-    
+    return 0;   
 }
 
 //inserts
@@ -116,11 +122,11 @@ void insert_sorted(struct node *node, struct list *list)
     }
 }
 
-void populate_list(char *path, struct list *list)
+void populate_list(char *path, struct list *list, char *keyword)
 {
     static int current_level = 1;
     if (current_level == 1) {
-        insert_sorted(create_node(path, current_level), list);
+        insert_sorted(create_node(path, current_level, 0), list);
         current_level++;
     }
     DIR *ds = opendir(path);
@@ -137,11 +143,14 @@ void populate_list(char *path, struct list *list)
         strcat(tmp, d->d_name);
         
         stat(tmp, &buf);            //populate buf with file information
-        insert_sorted(create_node(tmp, current_level), list);
+        struct node *new = create_node(tmp, current_level, 0);
+        insert_sorted(new, list);
         if (S_ISDIR(buf.st_mode)) {
             current_level++;
-            populate_list(tmp, list);
+            populate_list(tmp, list, keyword);
             current_level--;
+        } else {
+            new->keyword_frequency = seq_search_file(new->path, keyword);
         }
     }
     closedir(ds);
@@ -173,7 +182,7 @@ void print_list_to_file(struct list *list, char *filename)
             order++;
         else
             order = 1;
-        fprintf(fs, "%d:%d:%s\n", curr->level, order, curr->path);
+        fprintf(fs, "%d:%d:%d:%s\n", curr->level, order, curr->keyword_frequency, curr->path);
         curr = curr->next;
     }
     fclose(fs);
@@ -221,7 +230,7 @@ int main(int argc, char **argv)
     }
 
     struct list *dirlist = create_list();
-    populate_list(dirpath, dirlist);
+    populate_list(dirpath, dirlist, keyword);
     insertion_sort_by_level_increasing(dirlist);
     print_list_to_file(dirlist, outfile);    
     destroy_list(dirlist);
