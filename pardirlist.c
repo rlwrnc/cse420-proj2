@@ -4,9 +4,9 @@
  *
  * TODO:
  * -change input to require <keyword> and <ispar> params
- *      require <keyword> to be a single word
- * add <keyword_frequency> to each node
- *      searches for instances in FILES (folders have value of zero)
+ *      -require <keyword> to be a single word
+ * -add <keyword_frequency> to each node
+ *      -searches for instances in FILES (folders have value of zero)
  * Add multithreading functionality for ispar = 1
  *
  */
@@ -70,22 +70,18 @@ struct list *create_list()
 int seq_search_file(char *file_path, char *keyword)
 {
     FILE *fs;
-    char buff[1024];
-    char *token, *context;
+    char buff[1025];
+    char *token, *context, *exclude;
     int frequency;
 
     fs = fopen(file_path, "r");
-    context = NULL;
+    context = NULL, exclude = " \t\n";
     frequency = 0;
     
-    while (fgets(buff, 1024, fs) != NULL) {
-        token = strtok_r(buff, " \t", &context);
-        while (token != NULL) {
+    while (fgets(buff, 1025, fs) != NULL) 
+        for (token = strtok_r(buff, exclude, &context); token; token = strtok_r(NULL, exclude, &context))
             if (strcmp(token, keyword) == 0)
                 frequency++;
-            token = strtok_r(NULL, " ", &context);
-        }
-    }
 
     fclose(fs);
     return frequency;
@@ -93,6 +89,7 @@ int seq_search_file(char *file_path, char *keyword)
 
 int par_search_file()
 {
+    
     return 0;   
 }
 
