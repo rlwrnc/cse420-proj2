@@ -67,14 +67,14 @@ struct list *create_list()
 
 //frequency helper functions
 
-int seq_search_file(char *file_path, char *keyword)
+void seq_search_file(struct node *node, char *keyword)
 {
     FILE *fs;
     char buff[1025];
     char *token, *context, *exclude;
     int frequency;
 
-    fs = fopen(file_path, "r");
+    fs = fopen(node->path, "r");
     context = NULL, exclude = " \t\n";
     frequency = 0;
     
@@ -82,9 +82,8 @@ int seq_search_file(char *file_path, char *keyword)
         for (token = strtok_r(buff, exclude, &context); token; token = strtok_r(NULL, exclude, &context))
             if (strcmp(token, keyword) == 0)
                 frequency++;
-
+    node->keyword_frequency = frequency;
     fclose(fs);
-    return frequency;
 }
 
 int par_search_file()
@@ -147,7 +146,7 @@ void populate_list(char *path, struct list *list, char *keyword)
             populate_list(tmp, list, keyword);
             current_level--;
         } else {
-            new->keyword_frequency = seq_search_file(new->path, keyword);
+            seq_search_file(new, keyword);
         }
     }
     closedir(ds);
