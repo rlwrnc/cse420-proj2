@@ -99,7 +99,7 @@ void *psf_runner(void *param);
 void par_search_file(struct node *node, char *keyword)
 {
     pthread_attr_t attributes;
-    struct psf_args *args = malloc(sizeof(struct psf_args *));
+    struct psf_args *args = malloc(sizeof(struct psf_args));
     args->node = node;
     args->keyword = keyword;
     pthread_attr_init(&attributes);
