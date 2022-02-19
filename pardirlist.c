@@ -7,7 +7,7 @@
  *      -require <keyword> to be a single word
  * -add <keyword_frequency> to each node
  *      -searches for instances in FILES (folders have value of zero)
- * Add multithreading functionality for ispar = 1
+ * -Add multithreading functionality for ispar = 1
  *
  */
 
@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <ctype.h>
+#include <pthread.h>
 
 /* linked list w/ subroutines */
 
@@ -27,6 +28,7 @@ struct node {
     char *path;
     int level;
     int keyword_frequency;
+    pthread_t tid;
     struct node *next;
     struct node *prev;
 };
@@ -48,6 +50,7 @@ struct node *create_node(char *path, int level, int keyword_frequency)
     node->path = strdup(path);
     node->level = level;
     node->keyword_frequency = keyword_frequency;
+    node->tid = 0;
     node->next = NULL;
     node->prev = NULL;
     return node;
@@ -86,10 +89,43 @@ void seq_search_file(struct node *node, char *keyword)
     fclose(fs);
 }
 
-int par_search_file()
+struct psf_args {
+    struct node *node;
+    char *keyword;
+};
+
+void *psf_runner(void *param);
+
+void par_search_file(struct node *node, char *keyword)
 {
-    
-    return 0;   
+    pthread_attr_t attributes;
+    struct psf_args *args = malloc(sizeof(struct psf_args *));
+    args->node = node;
+    args->keyword = keyword;
+    pthread_attr_init(&attributes);
+    pthread_create(&node->tid, &attributes, psf_runner, args);
+}
+
+void *psf_runner(void *param)
+{
+    struct psf_args *args = (struct psf_args *) param;
+    FILE *fs;
+    char buff[1025];
+    char *token, *context, *exclude;
+    int frequency;
+
+    fs = fopen(args->node->path, "r");
+    context = NULL, exclude  = " \t\n";
+    frequency = 0;
+
+    while (fgets(buff, 1025, fs) != NULL)
+        for (token = strtok_r(buff, exclude, &context); token; token = strtok_r(NULL, exclude, &context))
+            if (strcmp(token, args->keyword) == 0)
+                frequency++;
+    args->node->keyword_frequency = frequency;
+    fclose(fs);
+    free(args);
+    pthread_exit(0);
 }
 
 //inserts
@@ -118,7 +154,7 @@ void insert_sorted(struct node *node, struct list *list)
     }
 }
 
-void populate_list(char *path, struct list *list, char *keyword)
+void populate_list(char *path, struct list *list, char *keyword, int ispar)
 {
     static int current_level = 1;
     if (current_level == 1) {
@@ -143,10 +179,13 @@ void populate_list(char *path, struct list *list, char *keyword)
         insert_sorted(new, list);
         if (S_ISDIR(buf.st_mode)) {
             current_level++;
-            populate_list(tmp, list, keyword);
+            populate_list(tmp, list, keyword, ispar);
             current_level--;
         } else {
-            seq_search_file(new, keyword);
+            if (ispar == 1)
+                par_search_file(new, keyword);
+            else
+                seq_search_file(new, keyword);
         }
     }
     closedir(ds);
@@ -168,12 +207,14 @@ void destroy_list(struct list *list)
 
 //prints
 
-void print_list_to_file(struct list *list, char *filename)
+void print_list_to_file(struct list *list, char *filename, int ispar)
 {
     int order;
     struct node *curr = list->head;
     FILE *fs = fopen(filename, "w");
     while (curr != NULL) {
+        if (ispar == 1)
+            pthread_join(curr->tid, NULL);
         if (curr->prev != NULL && curr->level == curr->prev->level)
             order++;
         else
@@ -226,9 +267,9 @@ int main(int argc, char **argv)
     }
 
     struct list *dirlist = create_list();
-    populate_list(dirpath, dirlist, keyword);
+    populate_list(dirpath, dirlist, keyword, ispar);
     insertion_sort_by_level_increasing(dirlist);
-    print_list_to_file(dirlist, outfile);    
+    print_list_to_file(dirlist, outfile, ispar);    
     destroy_list(dirlist);
     return 0;
 }
