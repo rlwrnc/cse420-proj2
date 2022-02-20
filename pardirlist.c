@@ -1,14 +1,7 @@
 /*
  * CSE 420 Project 2
  * Author: Raymond Lawrence
- *
- * TODO:
- * -change input to require <keyword> and <ispar> params
- *      -require <keyword> to be a single word
- * -add <keyword_frequency> to each node
- *      -searches for instances in FILES (folders have value of zero)
- * -Add multithreading functionality for ispar = 1
- *
+ * 
  */
 
 
