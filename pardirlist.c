@@ -77,55 +77,57 @@ void seq_search_file(struct node *node, char *keyword)
     char *token, *context, *exclude;
     int frequency;
 
-    fs = fopen(node->path, "r");
-    context = NULL, exclude = " \t\n";
-    frequency = 0;
+    fs = fopen(node->path, "r");                                    //open file with read permissions
+    context = NULL, exclude = " \t\n";                              //initialize strings for strtok_r
+    frequency = 0;                                                  //initialize frequency
     
-    while (fgets(buff, 1025, fs) != NULL) 
+    while (fgets(buff, 1025, fs) != NULL)                           //place the next line into buff until we reach the end of the file
+        //place next token into token until end of line
         for (token = strtok_r(buff, exclude, &context); token; token = strtok_r(NULL, exclude, &context))
-            if (strcmp(token, keyword) == 0)
+            if (strcmp(token, keyword) == 0)                        //if the current token is the keyword, add to frequency
                 frequency++;
     node->keyword_frequency = frequency;
     fclose(fs);
 }
 
-struct psf_args {
+struct psf_args {                                                   //structure to pass to pthread_create()
     struct node *node;
     char *keyword;
 };
 
-void *psf_runner(void *param);
+void *psf_runner(void *param);                                      //function prototype for my sanity
 
-void par_search_file(struct node *node, char *keyword)
+void par_search_file(struct node *node, char *keyword)              //wrapper for thread function
 {
     pthread_attr_t attributes;
-    struct psf_args *args = malloc(sizeof(struct psf_args));
+    struct psf_args *args = malloc(sizeof(struct psf_args));        //allocate new argument for each thread
     args->node = node;
     args->keyword = keyword;
     pthread_attr_init(&attributes);
-    pthread_create(&node->tid, &attributes, psf_runner, args);
+    pthread_create(&node->tid, &attributes, psf_runner, args);      //thread id is associated with each node
 }
 
-void *psf_runner(void *param)
+void *psf_runner(void *param)                                       //same as seq_search, but with multithreading
 {
+    //cast void pointer to psf_args pointer so the compiler knows what we're talking about
     struct psf_args *args = (struct psf_args *) param;
     FILE *fs;
     char buff[1025];
     char *token, *context, *exclude;
     int frequency;
 
-    fs = fopen(args->node->path, "r");
+    fs = fopen(args->node->path, "r");                              //must reference the args struct for the node's path
     context = NULL, exclude  = " \t\n";
     frequency = 0;
 
     while (fgets(buff, 1025, fs) != NULL)
         for (token = strtok_r(buff, exclude, &context); token; token = strtok_r(NULL, exclude, &context))
-            if (strcmp(token, args->keyword) == 0)
+            if (strcmp(token, args->keyword) == 0)                  //must reference the args struct for the keyword
                 frequency++;
     args->node->keyword_frequency = frequency;
     fclose(fs);
-    free(args);
-    pthread_exit(0);
+    free(args);                                                     //free memory we allocated to prevent leakage
+    pthread_exit(0);                                                //exit with null value as we passed our node by reference
 }
 
 //inserts
@@ -213,7 +215,7 @@ void print_list_to_file(struct list *list, char *filename, int ispar)
     struct node *curr = list->head;
     FILE *fs = fopen(filename, "w");
     while (curr != NULL) {
-        if (ispar == 1)
+        if (ispar == 1)                                                 //wait for the node's thread to terminate before writing
             pthread_join(curr->tid, NULL);
         if (curr->prev != NULL && curr->level == curr->prev->level)
             order++;
