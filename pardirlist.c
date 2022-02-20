@@ -97,7 +97,11 @@ void par_search_file(struct node *node, char *keyword)              //wrapper fo
     args->node = node;
     args->keyword = keyword;
     pthread_attr_init(&attributes);
-    pthread_create(&node->tid, &attributes, psf_runner, args);      //thread id is associated with each node
+    pthread_attr_setdetachstate(&attributes, PTHREAD_CREATE_JOINABLE);
+    if (pthread_create(&node->tid, &attributes, &psf_runner, args)) {
+            fprintf(stderr, "pardirlist: could not create thread; %s\n", strerror(errno));
+            exit(-1);
+    }
 }
 
 void *psf_runner(void *param)                                       //same as seq_search, but with multithreading
@@ -208,8 +212,12 @@ void print_list_to_file(struct list *list, char *filename, int ispar)
     struct node *curr = list->head;
     FILE *fs = fopen(filename, "w");
     while (curr != NULL) {
-        if (ispar == 1)                                                 //wait for the node's thread to terminate before writing
-            pthread_join(curr->tid, NULL);
+        if (ispar == 1 && curr->tid != 0) {
+            if (pthread_join(curr->tid, NULL)) {
+                fprintf(stderr, "pardirlist: could not join thread; %s\n", strerror(errno));
+                exit(-1);
+            }
+        }
         if (curr->prev != NULL && curr->level == curr->prev->level)
             order++;
         else
